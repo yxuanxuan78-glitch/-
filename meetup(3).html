@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>约会日 · 杨屁屁 & 晓纯纯</title>
+<style>
+  :root { color-scheme: light; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    min-height: 100vh; display: flex; justify-content: center;
+    background: #f0e6e0;
+  }
+
+  .app {
+    width: 100%; max-width: 480px; min-height: 100vh;
+    background: #fff; box-shadow: 0 0 40px rgba(0,0,0,0.06);
+    position: relative; overflow: hidden; display: flex; flex-direction: column;
+  }
+
+  /* header with bg image */
+  .header {
+    position: relative; padding: 24px 20px 70px; color: #fff;
+    background: linear-gradient(135deg, #f8bbd0, #f48fb1);
+    background-size: cover; background-position: center;
+    text-align: center; overflow: hidden;
+  }
+  .header.has-bg { background-image: var(--bg); }
+  .header-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.25);
+  }
+  .header.has-bg .header-overlay { display: block; }
+  .header:not(.has-bg) .header-overlay { display: none; }
+  .header h1 { position: relative; z-index: 1; font-size: 24px; letter-spacing: 2px; }
+  .header .sub { position: relative; z-index: 1; font-size: 13px; opacity: 0.9; margin-top: 2px; }
+  .header .bg-upload {
+    position: absolute; bottom: 8px; right: 12px; z-index: 2;
+    background: rgba(255,255,255,0.3); border: none; color: #fff;
+    font-size: 11px; padding: 4px 10px; border-radius: 50px;
+    cursor: pointer; letter-spacing: 1px;
+  }
+  .header::after {
+    content: ""; position: absolute; bottom: -30px; left: -10%;
+    width: 120%; height: 60px; background: #fff; border-radius: 50% 50% 0 0; z-index: 1;
+  }
+
+  /* tabs */
+  .tabs {
+    display: flex; padding: 0 12px; gap: 2px; margin-top: -30px;
+    position: relative; z-index: 2;
+  }
+  .tab {
+    flex: 1; padding: 10px 4px; text-align: center;
+    font-size: 12px; font-weight: 600; border-radius: 10px 10px 0 0;
+    cursor: pointer; color: #b0b0b0; background: #f5f5f5;
+    transition: all .2s; border: none; outline: none; letter-spacing: 1px;
+  }
+  .tab.active { background: #fff; color: #e91e63; box-shadow: 0 -2px 12px rgba(0,0,0,0.04); }
+
+  /* pages */
+  .page { display: none; padding: 16px; flex: 1; animation: fadeIn .3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+
+  /* profile */
+  .profile-pick {
+    display: flex; gap: 10px; margin-bottom: 12px;
+  }
+  .profile-card {
+    flex: 1; padding: 10px; border-radius: 14px; text-align: center;
+    cursor: pointer; transition: all .2s;
+    border: 2px solid transparent; background: #fafafa;
+  }
+  .profile-card.active { border-color: #e91e63; background: #fce4ec; }
+  .profile-card .emoji { font-size: 32px; }
+  .profile-card .name { font-size: 14px; font-weight: 700; margin-top: 4px; color: #333; }
+
+  /* calendar */
+  .cal-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  }
+  .cal-header .month-label { font-size: 16px; font-weight: 700; color: #333; }
+  .cal-header button {
+    background: #fce4ec; border: none; color: #e91e63;
+    width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer;
+  }
+  .weekdays {
+    display: grid; grid-template-columns: repeat(7,1fr);
+    text-align: center; font-size: 11px; color: #bbb; margin-bottom: 4px; font-weight: 600;
+  }
+  .days-grid {
+    display: grid; grid-template-columns: repeat(7,1fr); gap: 3px;
+  }
+  .day-cell {
+    aspect-ratio: 1; border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+    background: #fafafa; color: #666; position: relative;
+    border: none; outline: none; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent; min-width: 28px; min-height: 28px;
+  }
+  .day-cell:active:not(.other-month):not(.past) { background: #f8bbd0; transform: scale(0.9); }
+  .day-cell.other-month { color: #e0e0e0; pointer-events: none; }
+  .day-cell.past { color: #ccc; background: #f5f5f5; }
+  .day-cell.selected { background: #fce4ec; color: #e91e63; outline: 2px solid #e91e63; outline-offset: -2px; }
+  .day-cell .time-dots { display: flex; gap: 2px; margin-top: 1px; }
+  .day-cell .time-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .day-cell .time-dot.am { background: #ff9800; }
+  .day-cell .time-dot.pm { background: #2196f3; }
+  .day-cell .time-dot.ev { background: #9c27b0; }
+
+  /* time slot panel */
+  .time-panel {
+    background: #fafafa; border-radius: 14px; padding: 12px; margin-top: 10px;
+    display: none; gap: 8px; justify-content: center;
+  }
+  .time-panel.show { display: flex; }
+  .time-btn {
+    flex: 1; padding: 10px; border-radius: 12px; border: 2px solid #eee;
+    background: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all .15s; text-align: center;
+  }
+  .time-btn.on {
+    border-color: #e91e63; background: #fce4ec; color: #e91e63;
+  }
+  .time-label { font-size: 10px; color: #999; display: block; margin-top: 2px; }
+  .legend-time {
+    display: flex; gap: 12px; justify-content: center; margin-top: 8px; font-size: 10px; color: #aaa;
+  }
+  .legend-time span { display: flex; align-items: center; gap: 3px; }
+  .legend-time .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .legend-time .dot.am { background: #ff9800; }
+  .legend-time .dot.pm { background: #2196f3; }
+  .legend-time .dot.ev { background: #9c27b0; }
+
+  /* legend */
+  .legend {
+    display: flex; gap: 14px; justify-content: center; margin-top: 10px; font-size: 10px; color: #aaa;
+  }
+  .legend span { display: flex; align-items: center; gap: 3px; }
+  .legend .ldot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .legend .ldot.p1 { background: #e91e63; }
+  .legend .ldot.p2 { background: #64b5f6; }
+
+  /* activities */
+  .act-grid {
+    display: grid; grid-template-columns: repeat(2,1fr); gap: 10px;
+  }
+  .act-card {
+    background: #fafafa; border-radius: 16px; padding: 20px 12px;
+    text-align: center; cursor: pointer; transition: all .2s;
+    border: 2px solid transparent; position: relative;
+  }
+  .act-card:active { transform: scale(0.96); }
+  .act-card .icon { font-size: 44px; margin-bottom: 6px; }
+  .act-card .label { font-size: 15px; font-weight: 700; color: #333; }
+  .act-card .marks {
+    display: flex; gap: 4px; justify-content: center; margin-top: 6px;
+  }
+  .act-card .mark-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid #ddd; background: #fff; transition: all .2s;
+  }
+  .act-card .mark-dot.p0-on { background: #e91e63; border-color: #e91e63; }
+  .act-card .mark-dot.p1-on { background: #64b5f6; border-color: #64b5f6; }
+  .act-card .badge {
+    position: absolute; top: 8px; right: 8px;
+    background: linear-gradient(135deg, #e91e63, #f06292);
+    color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 50px;
+    font-weight: 600;
+  }
+
+  /* overlap page */
+  .section-title { font-size: 15px; font-weight: 700; color: #333; margin: 16px 0 10px; letter-spacing: 2px; }
+  .overlap-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .overlap-chip {
+    padding: 6px 14px; border-radius: 50px;
+    background: linear-gradient(135deg, #e91e63, #f06292);
+    color: #fff; font-weight: 600; font-size: 12px;
+  }
+  .overlap-chip .slot-label { font-size: 10px; opacity: 0.8; }
+
+  /* buttons */
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+  .btn {
+    flex: 1; padding: 12px; border-radius: 50px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    border: none; letter-spacing: 2px; transition: all .2s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: linear-gradient(135deg, #e91e63, #f06292); color: #fff; }
+  .btn-outline { background: #fff; color: #e91e63; border: 2px solid #e91e63; }
+  .btn-small {
+    padding: 6px 16px; border-radius: 50px; font-size: 11px;
+    font-weight: 600; cursor: pointer; border: none; letter-spacing: 1px;
+  }
+
+  /* sync bar */
+  .sync-bar {
+    display: flex; gap: 6px; padding: 8px 12px; background: #fff8f0;
+    border-bottom: 1px solid #fce4ec; font-size: 11px; color: #e91e63;
+    align-items: center; justify-content: center;
+  }
+  .sync-bar button {
+    background: #fce4ec; border: none; color: #e91e63;
+    padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+
+  /* log */
+  .log-card {
+    background: #fafafa; border-radius: 14px; padding: 14px; margin-bottom: 10px; position: relative;
+  }
+  .log-card .date { font-size: 12px; color: #e91e63; font-weight: 700; margin-bottom: 6px; }
+  .log-card .text { font-size: 14px; color: #444; line-height: 1.6; }
+  .log-card .photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .log-card .photos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
+  .log-card .delete-btn {
+    position: absolute; top: 8px; right: 8px; background: none; border: none;
+    font-size: 14px; cursor: pointer; opacity: .3;
+  }
+  .empty-state { text-align: center; padding: 30px 12px; color: #ccc; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; }
+
+  /* form */
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 11px; color: #999; margin-bottom: 3px; font-weight: 600; letter-spacing: 1px; }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid #eee; font-size: 14px; font-family: inherit; outline: none;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #e91e63; }
+  .form-group textarea { min-height: 70px; resize: vertical; }
+  .photo-previews { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .photo-previews img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+
+  /* modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: #fff; border-radius: 20px; padding: 24px 20px;
+    width: 90%; max-width: 380px; text-align: center;
+  }
+  .modal h3 { font-size: 16px; color: #333; margin-bottom: 10px; }
+  .modal p { font-size: 12px; color: #888; margin-bottom: 12px; }
+  .modal textarea {
+    width: 100%; height: 70px; border-radius: 10px; border: 1px solid #eee;
+    padding: 8px; font-size: 11px; font-family: monospace; resize: none; outline: none;
+  }
+  .hidden { display: none !important; }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; padding: 8px 20px; border-radius: 50px;
+    font-size: 12px; z-index: 200; pointer-events: none;
+    animation: toastIn .3s ease, toastOut .3s ease 2s forwards;
+  }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
+  @keyframes toastOut { from{opacity:1;} to{opacity:0;} }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header" id="header">
+    <div class="header-overlay"></div>
+    <h1>💕 约会日</h1>
+    <div class="sub" id="headerSub">杨屁屁 & 晓纯纯</div>
+    <button class="bg-upload" id="bgUpload">📷 换背景</button>
+    <input type="file" id="bgFileInput" accept="image/*" class="hidden">
+  </div>
+
+  <div class="sync-bar" id="syncBar">
+    ⚡ 同步数据 <button id="syncBtn">导出/导入</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-page="calendar">📅 日历</button>
+    <button class="tab" data-page="activities">🎯 活动</button>
+    <button class="tab" data-page="overlap">💘 重合</button>
+    <button class="tab" data-page="log">📝 日志</button>
+  </div>
+
+  <!-- ====== Calendar ====== -->
+  <div class="page active" id="page-calendar">
+    <div class="profile-pick" id="profilePick"></div>
+    <div class="cal-header">
+      <button id="prevMonth">◀</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button id="nextMonth">▶</button>
+    </div>
+    <div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div class="days-grid" id="daysGrid"></div>
+    <div class="time-panel" id="timePanel">
+      <button class="time-btn" data-slot="am">☀️ 上午<div class="time-label">6:00-12:00</div></button>
+      <button class="time-btn" data-slot="pm">🌤️ 下午<div class="time-label">12:00-18:00</div></button>
+      <button class="time-btn" data-slot="ev">🌙 晚上<div class="time-label">18:00-24:00</div></button>
+    </div>
+    <div class="legend-time">
+      <span><span class="dot am"></span> 上午</span>
+      <span><span class="dot pm"></span> 下午</span>
+      <span><span class="dot ev"></span> 晚上</span>
+    </div>
+    <div class="legend">
+      <span><span class="ldot p1"></span> 杨屁屁</span><span><span class="ldot p2"></span> 晓纯纯</span>
+    </div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-outline" id="clearPersonBtn">清空我的选择</button>
+    </div>
+  </div>
+
+  <!-- ====== Activities ====== -->
+  <div class="page" id="page-activities">
+    <div class="profile-pick" id="profilePickAct"></div>
+    <div class="act-grid" id="actGrid"></div>
+    <p style="text-align:center;font-size:11px;color:#bbb;margin-top:12px;">点击卡片切换你的选择 · 双方都选 = 重合</p>
+  </div>
+
+  <!-- ====== Overlap ====== -->
+  <div class="page" id="page-overlap">
+    <div class="section-title">📅 日期 + 时段重合</div>
+    <div class="overlap-chips" id="dateOverlap"></div>
+    <div class="section-title">🎯 活动重合</div>
+    <div class="overlap-chips" id="actOverlap"></div>
+  </div>
+
+  <!-- ====== Log ====== -->
+  <div class="page" id="page-log">
+    <div class="form-group"><label>见面日期</label><select id="logDate"></select></div>
+    <div class="form-group"><label>记录</label><textarea id="logText" placeholder="今天做了什么..."></textarea></div>
+    <div class="form-group"><label>照片</label><input type="file" id="logPhotos" accept="image/*" multiple><div class="photo-previews" id="photoPreviews"></div></div>
+    <button class="btn btn-primary" id="saveLogBtn" style="width:100%;">💾 保存</button>
+    <div style="margin-top:20px;" id="logList"></div>
+  </div>
+</div>
+
+<!-- sync modal -->
+<div class="modal-overlay hidden" id="shareModal">
+  <div class="modal">
+    <h3>📤 导出数据</h3><p>复制代码发给对方</p>
+    <textarea id="shareCode" readonly></textarea>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="copyBtn">📋 复制</button>
+      <button class="btn btn-outline" id="openImportBtn">📥 导入</button>
+      <button class="btn btn-outline" id="closeModalBtn">关闭</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay hidden" id="importModal">
+  <div class="modal">
+    <h3>📥 导入数据</h3><p>粘贴对方给你的代码</p>
+    <textarea id="importCode" placeholder="粘贴..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="doImportBtn">确认导入</button>
+      <button class="btn btn-outline" id="closeImportBtn">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== DATA ==========
+const STORAGE_KEY = "meetup2_data";
+const ACTIVITIES = [
+  { id:"park", icon:"🏞️", label:"公园" },
+  { id:"cafe", icon:"☕", label:"咖啡馆" },
+  { id:"study", icon:"📚", label:"自习" },
+  { id:"dog", icon:"🐶", label:"狗咖" },
+  { id:"cinema", icon:"🎬", label:"电影院" },
+  { id:"puzzle", icon:"🧩", label:"拼豆" },
+];
+
+function defaultData() { return {
+  person0: { name: "杨屁屁", dates: {}, acts: {} },
+  person1: { name: "晓纯纯", dates: {}, acts: {} },
+  logs: [],
+  bgImage: null
+};}
+
+function load() {
+  try { const r=localStorage.getItem(STORAGE_KEY); return r?JSON.parse(r):defaultData(); }
+  catch(e){ return defaultData(); }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = load();
+let currentPerson = 0;
+let calYear, calMonth, selectedDate = null;
+
+// ========== HELPERS ==========
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+function toast(m) {
+  const t=document.createElement("div"); t.className="toast"; t.textContent=m;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 2500);
+}
+function dk(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+const now = new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
+
+// ========== RENDER ALL ==========
+function renderAll() {
+  renderCalendar();
+  renderActivities();
+  renderOverlap();
+  renderLogDateSelect(); renderLogList();
+  renderProfilePicks();
+  renderHeader();
+}
+function renderHeader() {
+  $("#headerSub").textContent = state.person0.name+" & "+state.person1.name;
+  if(state.bgImage) {
+    $("#header").classList.add("has-bg");
+    $("#header").style.setProperty("--bg", `url(${state.bgImage})`);
+  } else { $("#header").classList.remove("has-bg"); }
+}
+
+// ========== PROFILE PICKS ==========
+function renderProfilePicks() {
+  [["profilePick","calendar"],["profilePickAct","activities"]].forEach(([id])=>{
+    const c=$( "#"+id );
+    if(!c) return;
+    c.innerHTML = [0,1].map(i=>`
+      <div class="profile-card${i===currentPerson?' active':''}" data-person="${i}">
+        <div class="emoji">${i===0?'🙋‍♂️':'🙋‍♀️'}</div>
+        <div class="name">${state['person'+i].name}</div>
+      </div>`).join("");
+    c.querySelectorAll(".profile-card").forEach(card=>{
+      card.addEventListener("click", ()=>{ currentPerson=parseInt(card.dataset.person); renderAll(); });
+    });
+  });
+}
+
+// ========== CALENDAR ==========
+function renderCalendar() {
+  $("#monthLabel").textContent = calYear+"年 "+(calMonth+1)+"月";
+  const grid=$("#daysGrid"); grid.innerHTML="";
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const dip=new Date(calYear,calMonth,0).getDate();
+  const today=dk(now.getFullYear(),now.getMonth(),now.getDate());
+
+  // prev
+  for(let i=firstDay-1;i>=0;i--) {
+    const d=dip-i;
+    const c=document.createElement("div"); c.className="day-cell other-month"; c.textContent=d; grid.appendChild(c);
+  }
+  // current
+  for(let d=1;d<=dim;d++) {
+    const key=dk(calYear,calMonth,d);
+    const c=document.createElement("div"); c.className="day-cell"; c.textContent=d;
+    if(key===selectedDate) c.classList.add("selected");
+    if(key<today) c.classList.add("past");
+    else {
+      c.addEventListener("click", ()=>{ selectedDate=key; renderCalendar(); $("#timePanel").classList.add("show"); updateTimeBtns(); });
+      c.addEventListener("touchend", e=>{ e.preventDefault(); selectedDate=key; renderCalendar(); $("#timePanel").classList.add("show"); updateTimeBtns(); });
+    }
+    // time dots
+    const td=document.createElement("div"); td.className="time-dots";
+    ["am","pm","ev"].forEach(slot=>{
+      const dot=document.createElement("span"); dot.className="time-dot "+slot;
+      const p0has=state.person0.dates[key]&&state.person0.dates[key][slot];
+      const p1has=state.person1.dates[key]&&state.person1.dates[key][slot];
+      if(p0has||p1has) dot.style.opacity="1"; else dot.style.opacity="0.15";
+      td.appendChild(dot);
+    });
+    c.appendChild(td);
+    grid.appendChild(c);
+  }
+  // next
+  const rem=42-grid.children.length;
+  for(let d=1;d<=rem;d++) {
+    const c=document.createElement("div"); c.className="day-cell other-month"; c.textContent=d; grid.appendChild(c);
+  }
+
+  updateTimeBtns();
+  $("#clearPersonBtn").textContent = "清空「"+state["person"+currentPerson].name+"」的选择";
+}
+
+function updateTimeBtns() {
+  if(!selectedDate) { $("#timePanel").classList.remove("show"); return; }
+  const key=selectedDate;
+  const slots=["am","pm","ev"];
+  const pd=state["person"+currentPerson].dates;
+  if(!pd[key]) pd[key]={};
+  slots.forEach(slot=>{
+    const btn=$("#timePanel .time-btn[data-slot='"+slot+"']");
+    if(pd[key][slot]) btn.classList.add("on"); else btn.classList.remove("on");
+  });
+}
+
+$$("#timePanel .time-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    if(!selectedDate) return;
+    const key=selectedDate;
+    const slot=btn.dataset.slot;
+    const pd=state["person"+currentPerson].dates;
+    if(!pd[key]) pd[key]={};
+    pd[key][slot]=!pd[key][slot];
+    // clean empty
+    if(!pd[key].am&&!pd[key].pm&&!pd[key].ev) delete pd[key];
+    save(); renderCalendar(); renderOverlap();
+  });
+});
+
+$("#prevMonth").addEventListener("click",()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} selectedDate=null; renderCalendar(); });
+$("#nextMonth").addEventListener("click",()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} selectedDate=null; renderCalendar(); });
+$("#clearPersonBtn").addEventListener("click",()=>{
+  if(confirm("确定清空「"+state["person"+currentPerson].name+"」的所有选择？")){
+    state["person"+currentPerson].dates={}; save(); renderAll(); toast("已清空");
+  }
+});
+
+// ========== ACTIVITIES ==========
+function renderActivities() {
+  const grid=$("#actGrid");
+  grid.innerHTML=ACTIVITIES.map(a=>{
+    const p0=!!state.person0.acts[a.id];
+    const p1=!!state.person1.acts[a.id];
+    const both=p0&&p1;
+    return `<div class="act-card" data-id="${a.id}">
+      ${both?'<div class="badge">💘 重合</div>':''}
+      <div class="icon">${a.icon}</div>
+      <div class="label">${a.label}</div>
+      <div class="marks">
+        <div class="mark-dot ${p0?'p0-on':''}"></div>
+        <span style="font-size:10px;color:#bbb;margin:0 4px;">&</span>
+        <div class="mark-dot ${p1?'p1-on':''}"></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  grid.querySelectorAll(".act-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      const id=card.dataset.id;
+      const acts=state["person"+currentPerson].acts;
+      if(acts[id]) delete acts[id]; else acts[id]=true;
+      save(); renderActivities(); renderOverlap();
+    });
+  });
+}
+
+// ========== OVERLAP ==========
+function renderOverlap() {
+  // date + time overlaps
+  const dc=$("#dateOverlap");
+  const allKeys=new Set([...Object.keys(state.person0.dates),...Object.keys(state.person1.dates)]);
+  const overlaps=[];
+  allKeys.forEach(key=>{
+    const d0=state.person0.dates[key]||{};
+    const d1=state.person1.dates[key]||{};
+    ["am","pm","ev"].forEach(slot=>{
+      if(d0[slot]&&d1[slot]) overlaps.push({key,slot});
+    });
+  });
+  if(overlaps.length===0){
+    dc.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>暂无日期重合<br>去日历页各自选时段吧</p></div>`;
+  } else {
+    const slotLabel={am:"☀️上午",pm:"🌤️下午",ev:"🌙晚上"};
+    dc.innerHTML=overlaps.map(o=>{
+      const [,m,d]=o.key.split("-");
+      return `<div class="overlap-chip">${parseInt(m)}/${parseInt(d)} <span class="slot-label">${slotLabel[o.slot]}</span></div>`;
+    }).join("");
+  }
+
+  // activity overlaps
+  const ac=$("#actOverlap");
+  const actOverlaps=ACTIVITIES.filter(a=>state.person0.acts[a.id]&&state.person1.acts[a.id]);
+  if(actOverlaps.length===0){
+    ac.innerHTML=`<div class="empty-state"><div class="icon">🎯</div><p>暂无活动重合<br>去活动页各自勾选吧</p></div>`;
+  } else {
+    ac.innerHTML=actOverlaps.map(a=>`<div class="overlap-chip">${a.icon} ${a.label}</div>`).join("");
+  }
+}
+
+// ========== LOG ==========
+let pendingPhotos=[];
+function renderLogDateSelect() {
+  const sel=$("#logDate");
+  const allKeys=new Set([...Object.keys(state.person0.dates),...Object.keys(state.person1.dates),...state.logs.map(l=>l.date)]);
+  sel.innerHTML=`<option value="">选择日期...</option>`+[...allKeys].sort().reverse().map(d=>`<option value="${d}">${d}</option>`).join("");
+}
+function renderLogList() {
+  const c=$("#logList");
+  if(state.logs.length===0){ c.innerHTML=`<div class="empty-state"><div class="icon">📖</div><p>还没有见面日志</p></div>`; return; }
+  c.innerHTML=state.logs.slice().reverse().map((l,i)=>{
+    const idx=state.logs.length-1-i;
+    return `<div class="log-card">
+      <button class="delete-btn" data-idx="${idx}">🗑️</button>
+      <div class="date">📅 ${l.date}</div>
+      <div class="text">${l.text||"(无文字)"}</div>
+      ${l.photos&&l.photos.length?`<div class="photos">${l.photos.map(p=>`<img src="${p}" onclick="this.requestFullscreen()">`).join("")}</div>`:""}
+    </div>`;
+  }).join("");
+  c.querySelectorAll(".delete-btn").forEach(b=>{
+    b.addEventListener("click",e=>{ e.stopPropagation(); const i=parseInt(b.dataset.idx);
+      if(confirm("删除？")){ state.logs.splice(i,1); save(); renderLogList(); renderLogDateSelect(); toast("已删除"); }});
+  });
+}
+$("#logPhotos").addEventListener("change",async e=>{
+  pendingPhotos=[]; $("#photoPreviews").innerHTML="";
+  for(const f of e.target.files){
+    const du=await new Promise(r=>{ const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(f); });
+    pendingPhotos.push(du); const img=document.createElement("img"); img.src=du; $("#photoPreviews").appendChild(img);
+  }
+});
+$("#saveLogBtn").addEventListener("click",()=>{
+  const date=$("#logDate").value, text=$("#logText").value.trim();
+  if(!date){ toast("选日期"); return; }
+  if(!text&&pendingPhotos.length===0){ toast("写点什么吧"); return; }
+  const ex=state.logs.findIndex(l=>l.date===date);
+  if(ex>=0){ state.logs[ex].text=text; state.logs[ex].photos=[...(state.logs[ex].photos||[]),...pendingPhotos]; }
+  else state.logs.push({date,text,photos:pendingPhotos});
+  save(); $("#logText").value=""; $("#logPhotos").value=""; pendingPhotos=[]; $("#photoPreviews").innerHTML="";
+  renderLogList(); renderLogDateSelect(); toast("💾 已保存");
+});
+
+// ========== TABS ==========
+$$(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    $$(".tab").forEach(x=>x.classList.remove("active")); t.classList.add("active");
+    $$(".page").forEach(p=>p.classList.remove("active"));
+    $(`#page-${t.dataset.page}`).classList.add("active");
+    if(t.dataset.page==="overlap") renderOverlap();
+    if(t.dataset.page==="log"){ renderLogDateSelect(); renderLogList(); }
+  });
+});
+
+// ========== SYNC ==========
+function exportData(){ return JSON.stringify(state); }
+function importData(s){
+  try{
+    const inc=JSON.parse(s);
+    // merge dates
+    [0,1].forEach(i=>{
+      const k="person"+i;
+      Object.keys(inc[k]?.dates||{}).forEach(d=>{
+        if(!state[k].dates[d]) state[k].dates[d]={};
+        Object.assign(state[k].dates[d], inc[k].dates[d]);
+      });
+      Object.assign(state[k].acts, inc[k]?.acts||{});
+      if(inc[k]?.name) state[k].name=inc[k].name;
+    });
+    // merge logs
+    const lm={}; state.logs.forEach(l=>{lm[l.date]=l;});
+    (inc.logs||[]).forEach(l=>{
+      if(lm[l.date]){ lm[l.date].photos=[...new Set([...(lm[l.date].photos||[]),...(l.photos||[])])]; if(l.text) lm[l.date].text=lm[l.date].text+"\n"+l.text; }
+      else lm[l.date]=l;
+    });
+    state.logs=Object.values(lm).sort((a,b)=>a.date.localeCompare(b.date));
+    if(inc.bgImage) state.bgImage=inc.bgImage;
+    save(); return true;
+  }catch(e){ return false; }
+}
+
+$("#syncBtn").addEventListener("click",()=>{ $("#shareCode").value=exportData(); $("#shareModal").classList.remove("hidden"); });
+$("#closeModalBtn").addEventListener("click",()=>$("#shareModal").classList.add("hidden"));
+$("#copyBtn").addEventListener("click",()=>{ $("#shareCode").select(); document.execCommand("copy"); toast("📋 已复制"); });
+$("#openImportBtn").addEventListener("click",()=>{ $("#shareModal").classList.add("hidden"); $("#importCode").value=""; $("#importModal").classList.remove("hidden"); });
+$("#closeImportBtn").addEventListener("click",()=>$("#importModal").classList.add("hidden"));
+$("#doImportBtn").addEventListener("click",()=>{
+  const c=$("#importCode").value.trim(); if(!c){ toast("粘贴代码"); return; }
+  if(importData(c)){ $("#importModal").classList.add("hidden"); renderAll(); toast("✅ 数据已合并"); }
+  else toast("❌ 格式错误");
+});
+
+// ========== BG UPLOAD ==========
+$("#bgUpload").addEventListener("click",()=>$("#bgFileInput").click());
+$("#bgFileInput").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const du=await new Promise(r=>{ const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(f); });
+  state.bgImage=du; save(); renderHeader(); toast("📷 背景已更新");
+});
+
+// ========== INIT ==========
+renderAll();
+$$("#timePanel .time-btn").forEach(b=>b.addEventListener("click",()=>{ updateTimeBtns(); }));
+</script>
+</body>
+</html>
